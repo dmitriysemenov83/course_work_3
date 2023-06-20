@@ -1,3 +1,5 @@
-from functions import print_last_operations
+from functions import get_data, filtered_data, date_and_data_formatting
 
-print_last_operations('operations.json')
+data = get_data()
+operations = filtered_data(data)
+date_and_data_formatting(operations)
