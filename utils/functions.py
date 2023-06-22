@@ -1,34 +1,60 @@
 import json
 from datetime import datetime
 
-def get_data():
-    with open('C:/project/course_work_3/utils/operations.json', 'r', encoding='utf-8') as f:
+
+def get_data(file_name):
+    """
+    Загружает список словарей операций из файла operations.json
+    """
+    with open(file_name, 'r', encoding='utf-8') as f:
         data = json.load(f)
         return data
 
 def filtered_data(data):
-    operation = [op for op in data if 'state' in op and op['state'] == 'EXECUTED'][-5:]
-    operation.reverse()
-    return operation
+    """
+    Получаем список словарей всех выполненных операций, фильтруем по дате, получаем последние пять операций
+    """
+    operation = [op for op in data if 'state' in op and op['state'] == 'EXECUTED']
+    sorted_data = sorted(operation, key=lambda x: datetime.strptime(x["date"], "%Y-%m-%dT%H:%M:%S.%f"))
+    last_operations = sorted_data[-5:]
+    last_operations.reverse()
+    return last_operations
 
 
-def date_and_data_formatting(operation):
-    for op in operation:
-        date = datetime.strptime(op['date'], '%Y-%m-%dT%H:%M:%S.%f').strftime('%d.%m.%Y')
-        description = op.get('description', 'No description')
-        # description = op['description']
-        if 'from' in op:
-            from_card = op['from']
-            card_name, card_number = from_card.split(' ', 1)
-            card_number = f"{card_number[:6]}{'*' * 6}{card_number[-4:]}"
-            from_card = f"{card_name} {card_number}"
-            # from_card = f"{from_card[:6]} {'*' * 6} {from_card[-4:]}"
+def encode_bill_info(bill_info):
+    """
+    Функция принимает строку, которая содержит информацию о счете, и возвращает новую строку,
+    в которой номер счета заменен на маскированный номер
+    """
+
+    bill_info = bill_info.split()
+    bill, info = bill_info[-1], " ".join(bill_info[:-1])
+    if len(bill) == 16:
+        bill = f"{ bill[:4] } { bill[4:6] }** **** { bill[-4:] }"
+    else:
+        bill = f"**{ bill[-4:] }"
+    to = f"{ info } { bill }"
+    return to
+
+
+def get_formatted_data(data):
+    """
+    Функция получает список словарей, форматирует эту информацию в удобный читаемый вид
+    """
+
+    formatted_data = []
+    for row in data:
+        date = datetime.strptime(row['date'], '%Y-%m-%dT%H:%M:%S.%f').strftime('%d.%m.%Y')
+        description = row["description"]
+        if "from" in row:
+            sender = encode_bill_info(row["from"])
+            sender = f"{sender} -> "
         else:
-            from_card = ""
-        to_account = op.get('to', 'No account')
-        # to_account = op['to']
-        amount = float(op['operationAmount']['amount'])
-        currency = op['operationAmount']['currency']['name']
-        print(f"{date} {description}")
-        print(f"{from_card} -> Счет **{to_account[-4:]}")
-        print(f"{amount:.2f} {currency}\n")
+            sender = ""
+        to = encode_bill_info(row['to'])
+        operations_amount = f"{row['operationAmount']['amount']} {row['operationAmount']['currency']['name']}"
+        formatted_data.append(f"""\
+{date} {description}
+{sender}{to}
+{operations_amount}""")
+    return formatted_data
